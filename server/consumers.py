@@ -5,7 +5,7 @@ import subprocess
 import json
 
 from django.http import HttpResponse
-from channels import Group, Channel
+from channels import Channel
 
 def http_consumer(message):
     Channel('slow-channel').send({'task_name': message.content['path'][1:]})
@@ -24,18 +24,3 @@ def slow_consumer(message):
 
 def task_result_consumer(message):
     print message.content
-
-# Connected to websocket.connect and websocket.keepalive
-def ws_add(message):
-    Group("chat").add(message.reply_channel)
-
-# Connected to websocket.receive
-def ws_message(message):
-    Group("chat").send(message.content)
-
-# Connected to websocket.disconnect
-def ws_disconnect(message):
-    Group("chat").discard(message.reply_channel)
-
-
-
