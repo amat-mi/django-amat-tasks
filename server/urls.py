@@ -22,6 +22,10 @@ urlpatterns += patterns('',
     url(r'^o/', include('oauth2_provider.urls', namespace='oauth2_provider'))
 )
 
+urlpatterns += patterns('',
+    url(r'^tasks/', include('tasks.urls', namespace='tasks')),
+)
+
 # Format suffixes
 urlpatterns = format_suffix_patterns(urlpatterns, allowed=['json', 'api'])
 

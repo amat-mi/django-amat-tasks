@@ -84,7 +84,8 @@ INSTALLED_APPS = (
     'django.contrib.gis',             
     #PAOLO - Following is for Django channels
     'channels',
-   ############
+    ############
+    'tasks',
 )
 
 AUTHENTICATION_BACKENDS = (
