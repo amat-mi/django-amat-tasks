@@ -24,3 +24,6 @@ def slow_consumer(message):
 
 def task_result_consumer(message):
     print message.content
+
+def as_view_consumer(message):
+    print message.content
