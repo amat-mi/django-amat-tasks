@@ -1,11 +1,12 @@
 # coding: utf-8
 
-import time
-import subprocess
 import json
+import subprocess
+import time
 
-from django.http import HttpResponse
 from channels import Channel
+from django.http import HttpResponse
+
 
 def http_consumer(message):
     Channel('slow-channel').send({'task_name': message.content['path'][1:]})

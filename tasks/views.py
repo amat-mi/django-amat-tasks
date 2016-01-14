@@ -4,8 +4,13 @@ from channels.channel import Channel
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.views.generic.base import View
 from rest_framework import viewsets
-from rest_framework.views import APIView
+from rest_framework.decorators import detail_route
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from tasks.models import Task
+from tasks.serializers import TaskSerializer
+from tasks.utils import build_message_response, build_exception_response
 
 
 #################################################
@@ -22,3 +27,18 @@ class TaskView(APIView):
 
   def post(self, request, format=None):
     return Response("OK:{}".format(request.data))
+
+#################################################
+class TaskViewSet(viewsets.ReadOnlyModelViewSet):
+  serializer_class = TaskSerializer
+  queryset = Task.objects.all()
+  paginate_by = None
+
+  @detail_route(methods=['POST'])
+  def run(self, request, pk=None):
+    try:
+      task = Task.objects.get(pk=pk)
+      Task.run_this(task)
+      return build_message_response('OK')
+    except Exception, exc:
+      return build_exception_response()

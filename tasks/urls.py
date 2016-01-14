@@ -4,12 +4,13 @@ from channels.channel import Channel
 from django.conf.urls import patterns, url, include
 from rest_framework.routers import SimpleRouter
 
-from tasks.views import DoitView, TaskView
+from tasks.views import DoitView, TaskView, TaskViewSet
 
 
 router = SimpleRouter()
 
 ##### Elenco endpoints ################################
+router.register(r'tasks', TaskViewSet)
 
 ##### Aggiunta degli url ####################################
 urlpatterns = patterns('',

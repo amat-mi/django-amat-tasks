@@ -3,6 +3,8 @@
 channel_routing = {
 #     "http.request": "server.consumers.http_consumer",
     "slow-channel": "server.consumers.slow_consumer",
-    "task_result-channel": "server.consumers.task_result_consumer",
     "as_view": "server.consumers.as_view_consumer",
+
+    "task-channel": "tasks.consumers.task_consumer",
+    "task_result-channel": "tasks.consumers.task_result_consumer",
 }
