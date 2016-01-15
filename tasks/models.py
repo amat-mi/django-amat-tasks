@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from django.utils.translation import ugettext_lazy as _
 from channels.channel import Channel
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
@@ -35,12 +36,23 @@ class Common(models.Model):
     
 ##########################################################
 class TaskRun(models.Model):    
+  CHOICES_PROGRESS = (
+    (-100, _(u'Fallito')),
+    ( -50, _(u'In ritardo')),
+    (   0, _(u'Partito')),
+    ( 100, _(u'Completo')),
+  )
+  
   task = models.ForeignKey('Task', null=False, blank=False, editable=False)
   user = models.ForeignKey(User, null=True, blank=True)
   started = models.DateTimeField(auto_now_add=True)
   updated = models.DateTimeField(auto_now=True)
-  ended = models.DateTimeField(null=True, blank=True)
+  progress = models.IntegerField(null=False, choices=CHOICES_PROGRESS, default=0)  
   result = models.TextField(null=True, blank=True)
+          
+  def save(self, *args, **kwargs):
+    Channel('taskrun-channel').send({'taskrun_pk': self.pk,'progress': self.progress})
+    super(TaskRun, self).save(*args, **kwargs)
           
 #################################################
 class Task(Common,WithAuthor):
@@ -63,9 +75,7 @@ class Task(Common,WithAuthor):
   def run_this(cls,instance):
     model = instance.content_type.model_class()
     task = model.objects.get(pk=instance.pk)
-    taskrun = TaskRun(task=task)
-    taskrun.full_clean()
-    taskrun.save()
+    taskrun = TaskRun.objects.create(task=task)
     return task.run(taskrun)
 
 #################################################
@@ -78,4 +88,5 @@ class ShellTask(Task):
 
   def run(self,taskrun):
     Channel('task-channel').send({'taskrun_pk': taskrun.pk,'cmd_line': self.cmd_line})
+    return taskrun
     

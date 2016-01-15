@@ -8,8 +8,8 @@ from rest_framework.decorators import detail_route
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from tasks.models import Task
-from tasks.serializers import TaskSerializer
+from tasks.models import Task, TaskRun
+from tasks.serializers import TaskSerializer, TaskRunSerializer
 from tasks.utils import build_message_response, build_exception_response
 
 
@@ -37,8 +37,14 @@ class TaskViewSet(viewsets.ReadOnlyModelViewSet):
   @detail_route(methods=['POST'])
   def run(self, request, pk=None):
     try:
-      task = Task.objects.get(pk=pk)
-      Task.run_this(task)
-      return build_message_response('OK')
+      task = self.get_object()
+      taskrun = Task.run_this(task)
+      return Response({'message': 'OK','taskrun_pk': taskrun.pk})
     except Exception, exc:
       return build_exception_response()
+
+#################################################
+class TaskRunViewSet(viewsets.ReadOnlyModelViewSet):
+  serializer_class = TaskRunSerializer
+  queryset = TaskRun.objects.all()
+  paginate_by = None

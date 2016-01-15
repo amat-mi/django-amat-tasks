@@ -7,4 +7,5 @@ channel_routing = {
 
     "task-channel": "tasks.consumers.task_consumer",
     "task_result-channel": "tasks.consumers.task_result_consumer",
+    "taskrun-channel": "tasks.consumers.taskrun_consumer",
 }

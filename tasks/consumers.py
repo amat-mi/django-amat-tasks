@@ -17,8 +17,8 @@ def task_consumer(message):
       cmd = message.content['cmd_line'].split() 
       out = subprocess.check_output(cmd)
       taskrun = TaskRun.objects.get(pk=message.content['taskrun_pk'])
+      taskrun.progress = 100
       taskrun.result = out
-#       taskrun.ended = now()
       taskrun.full_clean()
       taskrun.save()
       Channel('task_result-channel').send(json.loads(out))      
@@ -30,11 +30,14 @@ def task_consumer(message):
     except Exception, exc:
       res = build_exception_response().data
       taskrun = TaskRun.objects.get(pk=message.content['taskrun_pk'])
+      taskrun.progress = -100
       taskrun.result = res
-#       taskrun.ended = now()
       taskrun.full_clean()
       taskrun.save()
       Channel('task_result-channel').send(res)
 
 def task_result_consumer(message):
+    print message.content
+
+def taskrun_consumer(message):
     print message.content
