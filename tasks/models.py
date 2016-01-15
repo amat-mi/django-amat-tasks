@@ -44,7 +44,7 @@ class TaskRun(models.Model):
     (-100, _(u'Fallita')),
     ( -50, _(u'In ritardo')),
     (   0, _(u'Creata')),
-    (   0, _(u'Partita')),
+    (  50, _(u'Partita')),
     ( 100, _(u'Completa')),
   )
   
@@ -65,6 +65,11 @@ class TaskRun(models.Model):
     #should send progress (or all fields) to WebSocket!!!
     Channel('taskrun-channel').send({'taskrun_pk': self.pk,'progress': self.progress})
           
+  def start(self):
+    self.progress = 50
+    self.full_clean()
+    self.save()      
+    
   def fail(self,result):
     self.progress = -100
     self.result = result
@@ -105,6 +110,7 @@ def task_consumer(message):
     try:
       model = taskrun.task.content_type.model_class()
       task = model.objects.get(pk=taskrun.task.pk)
+      taskrun.start()
       taskrun.success(task.run())      
     except Exception, exc:
       taskrun.fail(build_exception_response().data)
