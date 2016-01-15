@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import subprocess
+import time
 
 from channels.channel import Channel
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from pip.cmdoptions import editable
-from twisted.conch.telnet import EDIT
 
-from tasks.utils import build_exception_response
+from tasks.utils import build_exception_response, build_error_response, RESPERR
 
 
 ##########################################################
@@ -48,7 +47,7 @@ class TaskRun(models.Model):
     ( 100, _(u'Completa')),
   )
   
-  task = models.ForeignKey('Task', null=False, blank=False, editable=False)
+  task = models.ForeignKey('Task', related_name='runs', null=False, blank=False, editable=False)
   user = models.ForeignKey(User, null=True, blank=True)
   started = models.DateTimeField(auto_now_add=True)
   updated = models.DateTimeField(auto_now=True)
@@ -103,15 +102,22 @@ class Task(Common,WithAuthor):
 
   def run(self):
     raise NotImplementedError()
+
+  @property
+  def running_count(self):
+    return self.runs.exclude(progress__in=[-100,100]).count()
   
 def task_consumer(message):
   taskrun = TaskRun.objects.get(pk=message.content['taskrun_pk'])
   if taskrun.progress == 0:
     try:
-      model = taskrun.task.content_type.model_class()
-      task = model.objects.get(pk=taskrun.task.pk)
-      taskrun.start()
-      taskrun.success(task.run())      
+      if taskrun.task.max_run > 0 and taskrun.task.running_count >= taskrun.task.max_run:
+        taskrun.fail(build_error_response(RESPERR.TOO_MANY_RUNS).data)
+      else:    
+        model = taskrun.task.content_type.model_class()
+        task = model.objects.get(pk=taskrun.task.pk)
+        taskrun.start()
+        taskrun.success(task.run())      
     except Exception, exc:
       taskrun.fail(build_exception_response().data)
               
@@ -124,7 +130,7 @@ class ShellTask(Task):
     verbose_name_plural = "Procedure shell"
 
   def run(self):
-#    time.sleep(10)
+    time.sleep(10)
     cmd = self.cmd_line.split() 
     return subprocess.check_output(cmd)
 #    print out

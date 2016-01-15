@@ -280,7 +280,8 @@ OAUTH2_PROVIDER = {
 
 CHANNEL_BACKENDS = {
     "default": {
-        "BACKEND": "channels.backends.database.DatabaseChannelBackend",
+#         "BACKEND": "channels.backends.database.DatabaseChannelBackend",
+        "BACKEND": "channels.backends.memory.InMemoryChannelBackend",
         "ROUTING": "server.routing.channel_routing",
     },
 }

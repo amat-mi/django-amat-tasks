@@ -12,6 +12,7 @@ def build_message_response(message,status=HttpResponse.status_code):
 #################################################
 class RESPERR(object):
   GENERIC_ERROR = 'GENERIC_ERROR'
+  TOO_MANY_RUNS = 'TOO_MANY_RUNS'
 
 def build_error_response(error,status=HttpResponseBadRequest.status_code,message=None):
   return Response({'error': error, 'message': message},status=status)
