@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 
-from django.utils.translation import ugettext_lazy as _
+import subprocess
+
 from channels.channel import Channel
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from twisted.conch.telnet import EDIT
+from django.utils.translation import ugettext_lazy as _
 from pip.cmdoptions import editable
+from twisted.conch.telnet import EDIT
+
+from tasks.utils import build_exception_response
 
 
 ##########################################################
@@ -58,15 +62,21 @@ class TaskRun(models.Model):
           
   def save(self, *args, **kwargs):
     super(TaskRun, self).save(*args, **kwargs)
+    #should send progress (or all fields) to WebSocket!!!
     Channel('taskrun-channel').send({'taskrun_pk': self.pk,'progress': self.progress})
           
-def taskrun_consumer(message):
-  print message.content         #should send to WebSocket!!!
-  
-  instance = TaskRun.objects.get(pk=message.content['taskrun_pk'])
-  if instance.progress == 0:
-    instance.task.run()
-          
+  def fail(self,result):
+    self.progress = -100
+    self.result = result
+    self.full_clean()
+    self.save()      
+    
+  def success(self,result):
+    self.progress = 100
+    self.result = result
+    self.full_clean()
+    self.save()      
+    
 #################################################
 class Task(Common,WithAuthor):
   content_type = models.ForeignKey(ContentType, null=True, blank=True, editable=False)
@@ -81,22 +91,24 @@ class Task(Common,WithAuthor):
       self.content_type = ContentType.objects.get_for_model(self.__class__)
     super(Task, self).save(*args, **kwargs)
 
-  def run(self):
-    raise NotImplementedError()
-
-  @classmethod
-  def run_this(cls,instance):
-    taskrun = TaskRun.objects.create(task=instance)
+  def start(self):
+    taskrun = TaskRun.objects.create(task=self)
     Channel('task-channel').send({'taskrun_pk': taskrun.pk})
     return taskrun
 
-  @classmethod
-  def pippo(cls,instance):
-    model = instance.content_type.model_class()
-    task = model.objects.get(pk=instance.pk)
-    taskrun = TaskRun.objects.create(task=task)
-    return task.run(taskrun)
-    
+  def run(self):
+    raise NotImplementedError()
+  
+def task_consumer(message):
+  taskrun = TaskRun.objects.get(pk=message.content['taskrun_pk'])
+  if taskrun.progress == 0:
+    try:
+      model = taskrun.task.content_type.model_class()
+      task = model.objects.get(pk=taskrun.task.pk)
+      taskrun.success(task.run())      
+    except Exception, exc:
+      taskrun.fail(build_exception_response().data)
+              
 #################################################
 class ShellTask(Task):
   cmd_line = models.CharField(max_length=2000, null=False, blank=False)
@@ -105,6 +117,12 @@ class ShellTask(Task):
     verbose_name = "Procedura shell"
     verbose_name_plural = "Procedure shell"
 
-  def run(self,taskrun):
-    Channel('task-channel').send({'taskrun_pk': taskrun.pk,'cmd_line': self.cmd_line})
-    return taskrun
+  def run(self):
+#    time.sleep(10)
+    cmd = self.cmd_line.split() 
+    return subprocess.check_output(cmd)
+#    print out
+#    cmd = "doit -f /Dati/dataflow/doit/topo.py --reporter json {}".format(message.content['task_name'])
+#    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, bufsize=1)
+#    for line in iter(proc.stdout.readline, b''):
+#        print line.strip()
