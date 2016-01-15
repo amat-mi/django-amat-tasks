@@ -37,10 +37,11 @@ class Common(models.Model):
 ##########################################################
 class TaskRun(models.Model):    
   CHOICES_PROGRESS = (
-    (-100, _(u'Fallito')),
+    (-100, _(u'Fallita')),
     ( -50, _(u'In ritardo')),
-    (   0, _(u'Partito')),
-    ( 100, _(u'Completo')),
+    (   0, _(u'Creata')),
+    (   0, _(u'Partita')),
+    ( 100, _(u'Completa')),
   )
   
   task = models.ForeignKey('Task', null=False, blank=False, editable=False)
@@ -50,9 +51,21 @@ class TaskRun(models.Model):
   progress = models.IntegerField(null=False, choices=CHOICES_PROGRESS, default=0)  
   result = models.TextField(null=True, blank=True)
           
+  class Meta:
+    ordering = ['task','started']
+    verbose_name = "Esecuzione procedura"
+    verbose_name_plural = "Esecuzioni procedura"
+          
   def save(self, *args, **kwargs):
-    Channel('taskrun-channel').send({'taskrun_pk': self.pk,'progress': self.progress})
     super(TaskRun, self).save(*args, **kwargs)
+    Channel('taskrun-channel').send({'taskrun_pk': self.pk,'progress': self.progress})
+          
+def taskrun_consumer(message):
+  print message.content         #should send to WebSocket!!!
+  
+  instance = TaskRun.objects.get(pk=message.content['taskrun_pk'])
+  if instance.progress == 0:
+    instance.task.run()
           
 #################################################
 class Task(Common,WithAuthor):
@@ -73,11 +86,17 @@ class Task(Common,WithAuthor):
 
   @classmethod
   def run_this(cls,instance):
+    taskrun = TaskRun.objects.create(task=instance)
+    Channel('task-channel').send({'taskrun_pk': taskrun.pk})
+    return taskrun
+
+  @classmethod
+  def pippo(cls,instance):
     model = instance.content_type.model_class()
     task = model.objects.get(pk=instance.pk)
     taskrun = TaskRun.objects.create(task=task)
     return task.run(taskrun)
-
+    
 #################################################
 class ShellTask(Task):
   cmd_line = models.CharField(max_length=2000, null=False, blank=False)
@@ -89,4 +108,3 @@ class ShellTask(Task):
   def run(self,taskrun):
     Channel('task-channel').send({'taskrun_pk': taskrun.pk,'cmd_line': self.cmd_line})
     return taskrun
-    

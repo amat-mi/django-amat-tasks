@@ -38,7 +38,8 @@ class TaskViewSet(viewsets.ReadOnlyModelViewSet):
   def run(self, request, pk=None):
     try:
       task = self.get_object()
-      taskrun = Task.run_this(task)
+#       taskrun = Task.run_this(task)
+      taskrun = TaskRun.objects.create(task=task)
       return Response({'message': 'OK','taskrun_pk': taskrun.pk})
     except Exception, exc:
       return build_exception_response()
