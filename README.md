@@ -4,6 +4,20 @@ Progetto Django per il server da installare come "192.1.1.76" e che gestisce i t
 
 # Installazione
 
+## Redis
+
+### Windows
+
+Vedere qui:
+
+    https://github.com/MSOpenTech/redis/releases
+    
+Installare la più recente versione 3.x disponibile dove "x" sia un numero pari.
+
+### Ubuntu
+
+    sudo apt-get install redis-server
+
 ## Twisted
 
 ### Windows

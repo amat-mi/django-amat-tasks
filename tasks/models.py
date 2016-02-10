@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
+import redis
 
 from tasks.utils import build_exception_response, build_error_response, RESPERR
 
@@ -152,3 +153,15 @@ class ShellTask(ChannelTask):
 #    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, bufsize=1)
 #    for line in iter(proc.stdout.readline, b''):
 #        print line.strip()
+
+#################################################
+# class RedisTask(Task):
+#   pass
+# 
+#   class Meta:
+#     verbose_name = "Procedura Redis"
+#     verbose_name_plural = "Procedure Redis"
+# 
+#   def run(self,taskrun):
+#     r = redis.StrictRedis.from_url('redis://localhost:6379/0')
+#     r.publish('task-channel',{'taskrun_pk': taskrun.pk})

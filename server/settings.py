@@ -281,7 +281,8 @@ OAUTH2_PROVIDER = {
 CHANNEL_BACKENDS = {
     "default": {
 #         "BACKEND": "channels.backends.database.DatabaseChannelBackend",
-        "BACKEND": "channels.backends.memory.InMemoryChannelBackend",
+#         "BACKEND": "channels.backends.memory.InMemoryChannelBackend",
+        "BACKEND": "channels.backends.redis_py.RedisChannelBackend",
         "ROUTING": "server.routing.channel_routing",
     },
 }
