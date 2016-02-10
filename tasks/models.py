@@ -97,15 +97,14 @@ class Task(Common,WithAuthor):
     super(Task, self).save(*args, **kwargs)
 
   def start(self):
+    if self.max_run > 0 and self.running_count >= self.max_run:
+      raise Exception(build_error_response(RESPERR.TOO_MANY_RUNS).data)    
     taskrun = TaskRun.objects.create(task=self)
     try:
-      if self.max_run > 0 and self.running_count >= self.max_run:
-        taskrun.fail(build_error_response(RESPERR.TOO_MANY_RUNS).data)
-      else:    
-        model = self.content_type.model_class()
-        task = model.objects.get(pk=self.pk)
-        taskrun.start()
-        task.run(taskrun)      
+      model = self.content_type.model_class()
+      task = model.objects.get(pk=self.pk)
+      taskrun.start()
+      task.run(taskrun)      
     except Exception, exc:
       taskrun.fail(build_exception_response().data)
     return taskrun
