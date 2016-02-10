@@ -97,39 +97,53 @@ class Task(Common,WithAuthor):
 
   def start(self):
     taskrun = TaskRun.objects.create(task=self)
-    Channel('task-channel').send({'taskrun_pk': taskrun.pk})
+    try:
+      if self.max_run > 0 and self.running_count >= self.max_run:
+        taskrun.fail(build_error_response(RESPERR.TOO_MANY_RUNS).data)
+      else:    
+        model = self.content_type.model_class()
+        task = model.objects.get(pk=self.pk)
+        taskrun.start()
+        task.run(taskrun)      
+    except Exception, exc:
+      taskrun.fail(build_exception_response().data)
     return taskrun
 
-  def run(self):
+  def run(self,taskrun):
     raise NotImplementedError()
 
   @property
   def running_count(self):
     return self.runs.exclude(progress__in=[-100,100]).count()
   
+#################################################
+class ChannelTask(Task):
+  pass
+
+  class Meta:
+    abstract = True
+
+  def run(self,taskrun):
+    Channel('task-channel').send({'taskrun_pk': taskrun.pk})
+              
 def task_consumer(message):
   taskrun = TaskRun.objects.get(pk=message.content['taskrun_pk'])
-  if taskrun.progress == 0:
-    try:
-      if taskrun.task.max_run > 0 and taskrun.task.running_count >= taskrun.task.max_run:
-        taskrun.fail(build_error_response(RESPERR.TOO_MANY_RUNS).data)
-      else:    
-        model = taskrun.task.content_type.model_class()
-        task = model.objects.get(pk=taskrun.task.pk)
-        taskrun.start()
-        taskrun.success(task.run())      
-    except Exception, exc:
-      taskrun.fail(build_exception_response().data)
-              
+  try:
+    model = taskrun.task.content_type.model_class()
+    task = model.objects.get(pk=taskrun.task.pk)
+    taskrun.success(task.channel_run())      
+  except Exception, exc:
+    taskrun.fail(build_exception_response().data)
+
 #################################################
-class ShellTask(Task):
+class ShellTask(ChannelTask):
   cmd_line = models.CharField(max_length=2000, null=False, blank=False)
 
   class Meta:
     verbose_name = "Procedura shell"
     verbose_name_plural = "Procedure shell"
 
-  def run(self):
+  def channel_run(self):
     time.sleep(10)
     cmd = self.cmd_line.split() 
     return subprocess.check_output(cmd)
