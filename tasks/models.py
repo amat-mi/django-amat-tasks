@@ -154,6 +154,22 @@ class ShellTask(ChannelTask):
 #        print line.strip()
 
 #################################################
+class RedisTask(Task):
+  channel = models.CharField(max_length=2000, null=False, blank=False)
+  message = models.CharField(max_length=2000, null=False, blank=False)
+ 
+  class Meta:
+    verbose_name = "Procedura Redis"
+    verbose_name_plural = "Procedure Redis"
+ 
+  def run(self,taskrun):
+    time.sleep(10)
+    r = redis.StrictRedis.from_url('redis://localhost:6379/0')
+    #ATTENZIONE!!! In realtà il task sarà eseguito esternamente e ci dovrebbe essere il modo di
+    #recuperare l'esito in seguito!!!
+    taskrun.success(r.publish(self.channel,self.message))
+
+#################################################
 # class RedisTask(Task):
 #   pass
 # 
@@ -164,3 +180,10 @@ class ShellTask(ChannelTask):
 #   def run(self,taskrun):
 #     r = redis.StrictRedis.from_url('redis://localhost:6379/0')
 #     r.publish('task-channel',{'taskrun_pk': taskrun.pk})
+# p = r.pubsub()
+# p.subscribe('my-first-channel', 'my-second-channel', ...)
+# p.psubscribe('my-*', ...)
+# p.psubscribe('django-channels:PUB:prova1')
+# p.get_message()
+# for message in p.listen():
+#  print message
