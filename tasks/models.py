@@ -163,11 +163,13 @@ class RedisTask(Task):
     verbose_name_plural = "Procedure Redis"
  
   def run(self,taskrun):
-    time.sleep(10)
-    r = redis.StrictRedis.from_url('redis://localhost:6379/0')
     #ATTENZIONE!!! In realtà il task sarà eseguito esternamente e ci dovrebbe essere il modo di
     #recuperare l'esito in seguito!!!
-    taskrun.success(r.publish(self.channel,self.message))
+    time.sleep(10)    
+#     r = redis.StrictRedis.from_url('redis://localhost:6379/0')
+#     taskrun.success(r.publish(self.channel,self.message))
+    taskrun.success(Channel('PUB:' + self.channel).send({'taskrun_pk': taskrun.pk,'message': self.message}))
+    
 
 #################################################
 # class RedisTask(Task):
