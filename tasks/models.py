@@ -62,7 +62,7 @@ class TaskRun(models.Model):
   def save(self, *args, **kwargs):
     super(TaskRun, self).save(*args, **kwargs)
     #should send progress (or all fields) to WebSocket!!!
-#     Channel('taskrun-channel').send({'taskrun_pk': self.pk,'progress': self.progress})
+    Channel('taskrun-channel').send({'taskrun_pk': self.pk,'progress': self.progress})
           
   def advance(self,progress,result=None):
     self.progress = progress
