@@ -86,10 +86,10 @@ class CommonAdmin(admin.ModelAdmin):
 
 #################################################
 class TaskAdmin(CommonAdmin):
-  list_display = CommonAdmin.list_display + ('max_run',)
+  list_display = CommonAdmin.list_display + ('max_run','async',)
   fieldsets = CommonAdmin.fieldsets + (
     (None, {
-        'fields': ('max_run',)
+        'fields': ('max_run','async',)
     }),
   )    
 #NOOO!!! Non voglio che si possano gestire i Task non effettivamente eseguibili!!!  

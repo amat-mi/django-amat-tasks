@@ -8,7 +8,6 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-import redis
 
 from tasks.utils import build_exception_response, build_error_response, RESPERR
 
@@ -63,29 +62,26 @@ class TaskRun(models.Model):
   def save(self, *args, **kwargs):
     super(TaskRun, self).save(*args, **kwargs)
     #should send progress (or all fields) to WebSocket!!!
-    Channel('taskrun-channel').send({'taskrun_pk': self.pk,'progress': self.progress})
+#     Channel('taskrun-channel').send({'taskrun_pk': self.pk,'progress': self.progress})
           
-  def start(self):
-    self.progress = 50
-    self.full_clean()
-    self.save()      
-    
-  def fail(self,result):
-    self.progress = -100
+  def advance(self,progress,result=None):
+    self.progress = progress
     self.result = result
     self.full_clean()
     self.save()      
     
-  def success(self,result):
-    self.progress = 100
-    self.result = result
-    self.full_clean()
-    self.save()      
+  def fail(self,result=None):
+    self.advance(-100,result=result)
     
+  def success(self,result=None):
+    self.advance(100,result=result)
+
 #################################################
 class Task(Common,WithAuthor):
   content_type = models.ForeignKey(ContentType, null=True, blank=True, editable=False)
   max_run = models.IntegerField(null=False, blank=True, default=0)
+  async = models.BooleanField(default=False,verbose_name='Asincrono',
+                              help_text='Se selezionato, esegue il task in un processo separato')
 
   class Meta:
     verbose_name = "Procedura"
@@ -103,8 +99,10 @@ class Task(Common,WithAuthor):
     try:
       model = self.content_type.model_class()
       task = model.objects.get(pk=self.pk)
-      taskrun.start()
-      task.run(taskrun)      
+      if self.async:
+        Channel('task-channel').send({'taskrun_pk': taskrun.pk})
+      else:
+        task.run(taskrun)      
     except Exception, exc:
       taskrun.fail(build_exception_response().data)
     return taskrun
@@ -115,38 +113,35 @@ class Task(Common,WithAuthor):
   @property
   def running_count(self):
     return self.runs.exclude(progress__in=[-100,100]).count()
-  
-#################################################
-class ChannelTask(Task):
-  pass
 
-  class Meta:
-    abstract = True
-
-  def run(self,taskrun):
-    Channel('task-channel').send({'taskrun_pk': taskrun.pk})
-              
 def task_consumer(message):
   taskrun = TaskRun.objects.get(pk=message.content['taskrun_pk'])
+  progress = message.content.get('progress',None)
+  if progress is not None:
+    taskrun.advance(progress,result=message.content.get('result',None))
   try:
     model = taskrun.task.content_type.model_class()
     task = model.objects.get(pk=taskrun.task.pk)
-    taskrun.success(task.channel_run())      
+    task.run(taskrun)      
   except Exception, exc:
     taskrun.fail(build_exception_response().data)
-
+  
 #################################################
-class ShellTask(ChannelTask):
+class ShellTask(Task):
   cmd_line = models.CharField(max_length=2000, null=False, blank=False)
 
   class Meta:
     verbose_name = "Procedura shell"
     verbose_name_plural = "Procedure shell"
 
-  def channel_run(self):
-    time.sleep(10)
-    cmd = self.cmd_line.split() 
-    return subprocess.check_output(cmd)
+  def run(self,taskrun):
+    if taskrun.progress == 0:
+      #NOOO!!! Essendo un choice non si può impostare a 25!!!
+#       taskrun.advance(25,"INIZIO")      
+      taskrun.advance(50,"INIZIO")      
+      time.sleep(10)
+      cmd = self.cmd_line.split() 
+      taskrun.success(subprocess.check_output(cmd))      
 #    print out
 #    cmd = "doit -f /Dati/dataflow/doit/topo.py --reporter json {}".format(message.content['task_name'])
 #    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, bufsize=1)
@@ -163,14 +158,10 @@ class RedisTask(Task):
     verbose_name_plural = "Procedure Redis"
  
   def run(self,taskrun):
-    #ATTENZIONE!!! In realtà il task sarà eseguito esternamente e ci dovrebbe essere il modo di
-    #recuperare l'esito in seguito!!!
-    time.sleep(10)    
-#     r = redis.StrictRedis.from_url('redis://localhost:6379/0')
-#     taskrun.success(r.publish(self.channel,self.message))
-    taskrun.success(Channel('PUB:' + self.channel).send({'taskrun_pk': taskrun.pk,'message': self.message}))
+    if taskrun.progress == 0:
+      time.sleep(10)    
+      Channel('PUB:' + self.channel).send({'taskrun_pk': taskrun.pk,'message': self.message})
     
-
 #################################################
 # class RedisTask(Task):
 #   pass
