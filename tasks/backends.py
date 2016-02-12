@@ -5,9 +5,13 @@ from channels.backends.redis_py import RedisChannelBackend
 
 class PublishingRedisChannelBackend(RedisChannelBackend):
     u"""
-    If a message is sent on a specially prefixed channel ("PUB:"), publishes it instead of sending it.
-    Also try getting published messages in addition to reading them, as the superclass does.
+    If a message is sent on a specially prefixed channel, publishes it instead of sending it.
+    Also subscribes to all channels (specially prefixed) and receives messages from there too.
     """
+
+    def __init__(self, *args, **kwargs):
+        self.pubsub_prefix = kwargs.pop('pubsub_prefix','PUB:')
+        super(PublishingRedisChannelBackend, self).__init__(*args,**kwargs)
 
     _pubsub = None
     
@@ -20,11 +24,11 @@ class PublishingRedisChannelBackend(RedisChannelBackend):
     def pubsub(self):
         if not self._pubsub:
             self._pubsub = self.connection.pubsub(ignore_subscribe_messages=True)
-            self._pubsub.subscribe([self.prefix + 'PUB:' + channel for channel in self.registry.all_channel_names()])
+            self._pubsub.subscribe([self.prefix + self.pubsub_prefix + channel for channel in self.registry.all_channel_names()])
         return self._pubsub 
            
     def send(self, channel, message):
-        if channel.startswith("PUB:"):
+        if channel.startswith(self.pubsub_prefix):
             self.connection.publish(self.prefix + channel,json.dumps(message))
         else:
             super(PublishingRedisChannelBackend, self).send(channel, message)
@@ -40,7 +44,7 @@ class PublishingRedisChannelBackend(RedisChannelBackend):
             message = self.pubsub.get_message()       #peek at subscribed channels
             if message and message.get('type',None) in ['message','pmessage']:
                 try:
-                    res = (message.get('channel','')[len(self.prefix + 'PUB:'):],json.loads(message.get('data',None)))
+                    res = (message.get('channel','')[len(self.prefix + self.pubsub_prefix):],json.loads(message.get('data',None)))
                     break
                 except:
                     #log error and ignore it!!!
