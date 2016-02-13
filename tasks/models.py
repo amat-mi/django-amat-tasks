@@ -92,37 +92,50 @@ class Task(Common,WithAuthor):
       self.content_type = ContentType.objects.get_for_model(self.__class__)
     super(Task, self).save(*args, **kwargs)
 
+  _downcast = None
+  @property
+  def downcast(self):
+    if not self._downcast: 
+      self._downcast = self.content_type.model_class().objects.get(pk=self.pk)
+    return self._downcast
+    
   def start(self):
     if self.max_run > 0 and self.running_count >= self.max_run:
       raise Exception(build_error_response(RESPERR.TOO_MANY_RUNS).data)    
     taskrun = TaskRun.objects.create(task=self)
     try:
-      model = self.content_type.model_class()
-      task = model.objects.get(pk=self.pk)
       if self.async:
-        Channel('task-channel').send({'taskrun_pk': taskrun.pk})
+        Channel('task-run').send({'taskrun_pk': taskrun.pk})
       else:
-        task.run(taskrun)      
+        self.downcast.run(taskrun)      
     except Exception, exc:
       taskrun.fail(build_exception_response().data)
     return taskrun
 
   def run(self,taskrun):
-    raise NotImplementedError()
+    raise NotImplementedError()       #subclasses MUST define this
+
+  def progress(self,taskrun):
+    pass              #subclasses MAY define this
 
   @property
   def running_count(self):
     return self.runs.exclude(progress__in=[-100,100]).count()
 
-def task_consumer(message):
+def task_run_consumer(message):
+  taskrun = TaskRun.objects.get(pk=message.content['taskrun_pk'])
+  try:
+    taskrun.task.downcast.run(taskrun)      
+  except Exception, exc:
+    taskrun.fail(build_exception_response().data)
+  
+def task_progress_consumer(message):
   taskrun = TaskRun.objects.get(pk=message.content['taskrun_pk'])
   progress = message.content.get('progress',None)
   if progress is not None:
     taskrun.advance(progress,result=message.content.get('result',None))
   try:
-    model = taskrun.task.content_type.model_class()
-    task = model.objects.get(pk=taskrun.task.pk)
-    task.run(taskrun)      
+    taskrun.task.downcast.progress(taskrun)      
   except Exception, exc:
     taskrun.fail(build_exception_response().data)
   
@@ -135,13 +148,12 @@ class ShellTask(Task):
     verbose_name_plural = "Procedure shell"
 
   def run(self,taskrun):
-    if taskrun.progress == 0:
-      #NOOO!!! Essendo un choice non si può impostare a 25!!!
+    #NOOO!!! Essendo un choice non si può impostare a 25!!!
 #       taskrun.advance(25,"INIZIO")      
-      taskrun.advance(50,"INIZIO")      
-      time.sleep(10)
-      cmd = self.cmd_line.split() 
-      taskrun.success(subprocess.check_output(cmd))      
+    taskrun.advance(50,"INIZIO")      
+    time.sleep(10)
+    cmd = self.cmd_line.split() 
+    taskrun.success(subprocess.check_output(cmd))      
 #    print out
 #    cmd = "doit -f /Dati/dataflow/doit/topo.py --reporter json {}".format(message.content['task_name'])
 #    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, bufsize=1)
@@ -158,9 +170,8 @@ class RedisTask(Task):
     verbose_name_plural = "Procedure Redis"
  
   def run(self,taskrun):
-    if taskrun.progress == 0:
-      time.sleep(10)    
-      Channel('PUB:' + self.channel).send({'taskrun_pk': taskrun.pk,'message': self.message})
+    time.sleep(10)    
+    Channel('PUB:' + self.channel).send({'taskrun_pk': taskrun.pk,'message': self.message})
     
 #################################################
 # class RedisTask(Task):

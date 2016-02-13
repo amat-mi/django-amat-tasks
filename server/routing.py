@@ -5,7 +5,9 @@ channel_routing = {
     "slow-channel": "server.consumers.slow_consumer",
     "as_view": "server.consumers.as_view_consumer",
 
-    "task-channel": "tasks.models.task_consumer",
     "task_result-channel": "tasks.consumers.task_result_consumer",
     "taskrun-channel": "tasks.consumers.taskrun_consumer",
+
+    "task-run": "tasks.models.task_run_consumer",
+    "task-progress": "tasks.models.task_progress_consumer",    
 }
