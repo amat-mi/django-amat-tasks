@@ -3,22 +3,22 @@ import json
 from channels.backends.redis_py import RedisChannelBackend
 
 
-class PublishingRedisChannelBackend(RedisChannelBackend):
+class PubSubRedisChannelBackend(RedisChannelBackend):
     u"""
     If a message is sent on a specially prefixed channel, publishes it instead of sending it.
     Also subscribes to all channels (specially prefixed) and receives messages from there too.
     """
 
     def __init__(self, *args, **kwargs):
-        self.pubsub_prefix = kwargs.pop('pubsub_prefix','PUB:')
-        super(PublishingRedisChannelBackend, self).__init__(*args,**kwargs)
+        self.pubsub_prefix = kwargs.pop('pubsub_prefix','EXT:')
+        super(PubSubRedisChannelBackend, self).__init__(*args,**kwargs)
 
     _pubsub = None
     
     def __del__(self):
         if self._pubsub:
             self._pubsub.unsubscribe()
-        super(PublishingRedisChannelBackend, self).__del__()
+        super(PubSubRedisChannelBackend, self).__del__()
             
     @property
     def pubsub(self):
@@ -31,7 +31,7 @@ class PublishingRedisChannelBackend(RedisChannelBackend):
         if channel.startswith(self.pubsub_prefix):
             self.connection.publish(self.prefix + channel,json.dumps(message))
         else:
-            super(PublishingRedisChannelBackend, self).send(channel, message)
+            super(PubSubRedisChannelBackend, self).send(channel, message)
 
     def receive_many(self, channels):
         u"""

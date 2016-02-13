@@ -144,8 +144,8 @@ class ShellTask(Task):
   cmd_line = models.CharField(max_length=2000, null=False, blank=False)
 
   class Meta:
-    verbose_name = "Procedura shell"
-    verbose_name_plural = "Procedure shell"
+    verbose_name = "Procedura Shell"
+    verbose_name_plural = "Procedure Shell"
 
   def run(self,taskrun):
     #NOOO!!! Essendo un choice non si può impostare a 25!!!
@@ -161,17 +161,17 @@ class ShellTask(Task):
 #        print line.strip()
 
 #################################################
-class RedisTask(Task):
+class ChannelTask(Task):
   channel = models.CharField(max_length=2000, null=False, blank=False)
-  message = models.CharField(max_length=2000, null=False, blank=False)
+  message = models.CharField(max_length=2000, null=True, blank=True)
  
   class Meta:
-    verbose_name = "Procedura Redis"
-    verbose_name_plural = "Procedure Redis"
+    verbose_name = "Procedura Channel"
+    verbose_name_plural = "Procedure Channel"
  
   def run(self,taskrun):
     time.sleep(10)    
-    Channel('PUB:' + self.channel).send({'taskrun_pk': taskrun.pk,'message': self.message})
+    Channel(self.channel).send({'taskrun_pk': taskrun.pk,'message': self.message})
     
 #################################################
 # class RedisTask(Task):

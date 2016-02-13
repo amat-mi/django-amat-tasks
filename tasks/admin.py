@@ -11,7 +11,7 @@ from django.utils.encoding import smart_unicode
 from django.utils.html import escape
 from django.utils.translation import ugettext_lazy as _
 
-from tasks.models import Task, ShellTask, RedisTask
+from tasks.models import Task, ShellTask, ChannelTask
 
 
 #################################################
@@ -106,11 +106,11 @@ class ShellTaskAdmin(TaskAdmin):
 admin.site.register(ShellTask,ShellTaskAdmin)
 
 #################################################
-class RedisTaskAdmin(TaskAdmin):
+class ChannelTaskAdmin(TaskAdmin):
   list_display = TaskAdmin.list_display
   fieldsets = TaskAdmin.fieldsets + (
     (None, {
         'fields': ('channel','message')
     }),
   )    
-admin.site.register(RedisTask,RedisTaskAdmin)
+admin.site.register(ChannelTask,ChannelTaskAdmin)
