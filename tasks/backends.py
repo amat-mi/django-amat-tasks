@@ -10,7 +10,8 @@ class PubSubRedisChannelBackend(RedisChannelBackend):
     """
 
     def __init__(self, *args, **kwargs):
-        self.pubsub_prefix = kwargs.pop('pubsub_prefix','EXT:')
+        self.pub_prefix = kwargs.pop('pub_prefix','PUB:')
+        self.sub_prefix = kwargs.pop('sub_prefix','SUB:')
         super(PubSubRedisChannelBackend, self).__init__(*args,**kwargs)
 
     _pubsub = None
@@ -24,11 +25,11 @@ class PubSubRedisChannelBackend(RedisChannelBackend):
     def pubsub(self):
         if not self._pubsub:
             self._pubsub = self.connection.pubsub(ignore_subscribe_messages=True)
-            self._pubsub.subscribe([self.prefix + self.pubsub_prefix + channel for channel in self.registry.all_channel_names()])
+            self._pubsub.subscribe([self.prefix + self.sub_prefix + channel for channel in self.registry.all_channel_names()])
         return self._pubsub 
            
     def send(self, channel, message):
-        if channel.startswith(self.pubsub_prefix):
+        if channel.startswith(self.pub_prefix):
             self.connection.publish(self.prefix + channel,json.dumps(message))
         else:
             super(PubSubRedisChannelBackend, self).send(channel, message)
@@ -44,7 +45,7 @@ class PubSubRedisChannelBackend(RedisChannelBackend):
             message = self.pubsub.get_message()       #peek at subscribed channels
             if message and message.get('type',None) in ['message','pmessage']:
                 try:
-                    res = (message.get('channel','')[len(self.prefix + self.pubsub_prefix):],json.loads(message.get('data',None)))
+                    res = (message.get('channel','')[len(self.prefix + self.sub_prefix):],json.loads(message.get('data',None)))
                     break
                 except:
                     #log error and ignore it!!!

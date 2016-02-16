@@ -285,6 +285,7 @@ CHANNEL_BACKENDS = {
 #         "BACKEND": "channels.backends.redis_py.RedisChannelBackend",
         "BACKEND": "tasks.backends.PubSubRedisChannelBackend",
         "ROUTING": "server.routing.channel_routing",
-#         "PUBSUB_PREFIX": "ZUB:"
+#         "PUB_PREFIX": "PUB:"
+#         "SUB_PREFIX": "SUB:"
     },
 }
