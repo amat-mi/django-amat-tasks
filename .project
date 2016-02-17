@@ -3,8 +3,6 @@
 	<name>django-amat-tasks</name>
 	<comment></comment>
 	<projects>
-		<project>atm-tweet-server</project>
-		<project>park_server</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
