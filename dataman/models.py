@@ -83,4 +83,5 @@ class DataTask(models.Model):
     verbose_name = _("Dipendenza")
     verbose_name_plural = _("Dipendenze")
     ordering = ['task','ord']
+    unique_together = ('data', 'dep',)      #a data can't depend from another more than once
     
