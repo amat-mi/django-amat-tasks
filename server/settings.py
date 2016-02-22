@@ -86,6 +86,7 @@ INSTALLED_APPS = (
     'channels',
     ############
     'tasks',
+    'dataman',
 )
 
 AUTHENTICATION_BACKENDS = (
