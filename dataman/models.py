@@ -68,7 +68,11 @@ class Data(Common,WithAuthor,Downcasting):
   class Meta:
     verbose_name = _("Dati")
     verbose_name_plural = _("Dati")
+    ordering = ['container','ord','name']
 
+  def __unicode__(self):
+    return u'{}.{}'.format(self.container,self.name)
+  
 #################################################
 class DataTask(models.Model):
   task = models.ForeignKey('tasks.Task',related_name='data',null=True, blank=True)
@@ -77,7 +81,7 @@ class DataTask(models.Model):
   ord = models.IntegerField(null=True, blank=True, default=0)
 
   def __unicode__(self):
-    return u'{} dipende da {} tramite {}'.format(self.data,self.dep,self.task)
+    return u'{} -dipende da- {} -via- {}'.format(self.data,self.dep,self.task)
   
   class Meta:
     verbose_name = _("Dipendenza")

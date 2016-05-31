@@ -101,15 +101,17 @@ class DataTaskInline(admin.TabularInline):
   fk_name = 'data'
   extra = 0           #nessun record già pronto per la aggiunta
   max_num = None      #consente aggiunta di infiniti record inline
+  fields = ('dep','task','ord',)
   raw_id_fields = ('dep',)
         
 #################################################
 class DataAdmin(CommonAdmin):
-  list_display = CommonAdmin.list_display + ('container',)
+  list_display = CommonAdmin.list_display
+  list_filter = ('container',)
   inlines = [DataTaskInline]
-  fieldsets = CommonAdmin.fieldsets + (
+  fieldsets = (
     (None, {
         'fields': ('container',)
     }),
-  )    
+  ) + CommonAdmin.fieldsets    
 admin.site.register(Data,DataAdmin)
